@@ -7,7 +7,6 @@ import 'package:camera/camera.dart';
 
 import 'main.dart';
 List<CameraDescription> cameras;
-
 class Home extends StatefulWidget {
 
 
@@ -18,7 +17,9 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   //final WidgetsFlutterBinding binding = WidgetsFlutterBinding.ensureInitialized();
   FirebaseAuth auth = FirebaseAuth.instance;
-  var isEnabled = false;
+  bool isEnabled = VideoPlayerController.isEnabled;
+
+
   CameraController controller;
   @override
   Widget build(BuildContext context) {
@@ -47,6 +48,7 @@ class _HomeState extends State<Home> {
                   ),
                   looping: true,
                 ),
+
                 MaterialButton(
                   color: Colors.white,
                   onPressed: () {
@@ -58,8 +60,19 @@ class _HomeState extends State<Home> {
                   },
                 )
               ]),
-          pipWidget: isEnabled ? Container(color: Colors.pink,):Container(),
+            pipWidget: (isEnabled && controller.value.isInitialized && controller != null)
+                ? AspectRatio(
+                aspectRatio:
+                controller.value.aspectRatio,
+                child: CameraPreview(controller))
+                : Container(),
             pipEnabled: isEnabled,
+
+            onClosed: () {
+              setState(() {
+                isEnabled = !isEnabled;
+              });
+            },
           ),
               ),);
   }
@@ -72,10 +85,32 @@ class _HomeState extends State<Home> {
     // Navigator.pop(context);
     //print("User Signed Out");
   }
+  @override
+  void initState(){
+    super.initState();
+    initCamera();
+  }
 
-   slo() async{
-  //  WidgetsFlutterBinding.ensureInitialized();
-    cameras = await availableCameras();
+  @override
+  void dispose() {
+    controller?.dispose();
+    super.dispose();
+  }
+
+  Future<void> initCamera() async{
+    try{
+      cameras = await availableCameras();
+      controller = new CameraController(cameras[1], ResolutionPreset.medium);
+      await controller.initialize();
+    }on CameraException catch(_){
+      setState(() {
+        isEnabled = false;
+      });
+
+      setState(() {
+        isEnabled = true;
+      });
+    }
   }
 
 }
